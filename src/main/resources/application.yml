@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: AskifyAPP
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: askify_db
+      auto-index-creation: true

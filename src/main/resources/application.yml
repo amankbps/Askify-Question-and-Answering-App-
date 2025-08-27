@@ -7,3 +7,8 @@ spring:
       port: 27017
       database: askify_db
       auto-index-creation: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: view-count-consumer
+

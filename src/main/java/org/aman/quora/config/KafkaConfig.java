@@ -26,8 +26,9 @@ public class KafkaConfig {
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
 
-    public static final String TOPIC_NAME="view-count-topic";
+    public static final String TOPIC_NAME = "view-count-topic";
 
+    // Producer
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -38,18 +39,24 @@ public class KafkaConfig {
     }
 
     @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
+    }
+
+    // Consumer
+    @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
+        JsonDeserializer<Object> deserializer = new JsonDeserializer<>();
+        // trust your event package
+        deserializer.addTrustedPackages("org.aman.quora.events");
+
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        return new DefaultKafkaConsumerFactory<>(configProps);
-    }
+        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
 
-    @Bean
-    public KafkaTemplate<String, Object> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+        return new DefaultKafkaConsumerFactory<>(configProps, new StringDeserializer(), deserializer);
     }
 
     @Bean
@@ -59,5 +66,4 @@ public class KafkaConfig {
         factory.setConcurrency(3);
         return factory;
     }
-
 }

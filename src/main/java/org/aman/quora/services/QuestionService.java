@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.aman.quora.adapter.QuestionAdapter;
 import org.aman.quora.dto.QuestionRequestDTO;
 import org.aman.quora.dto.QuestionResponseDTO;
+import org.aman.quora.events.ViewCount;
 import org.aman.quora.models.Question;
+import org.aman.quora.producers.KafkaEventProducer;
 import org.aman.quora.repositories.QuestionRepository;
 import org.aman.quora.utils.CursorUtils;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 public class QuestionService implements IQuestionService {
 
     private final QuestionRepository questionRepository;
+    private final KafkaEventProducer kafkaEventProducer;
 
 
     @Override
@@ -35,7 +38,11 @@ public class QuestionService implements IQuestionService {
     public Mono<QuestionResponseDTO> getQuestionById(String id) {
         return questionRepository.findById(id)
                 .map(QuestionAdapter::toQuestionResponseDTO)
-                .doOnSuccess(response-> System.out.println("Question get successfully: " + response))
+                .doOnSuccess(response-> {
+                    System.out.println("Question get successfully: " + response);
+                    ViewCount viewCount = new ViewCount(id,"question",LocalDateTime.now());
+                    kafkaEventProducer.publishViewCountEvent(viewCount);
+                })
                 .doOnError(error -> System.out.println("Error getting question: " + error.getMessage()));
     }
 

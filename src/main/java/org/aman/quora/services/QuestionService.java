@@ -6,7 +6,9 @@ import org.aman.quora.dto.QuestionRequestDTO;
 import org.aman.quora.dto.QuestionResponseDTO;
 import org.aman.quora.events.ViewCount;
 import org.aman.quora.models.Question;
+import org.aman.quora.models.QuestionElasticDocument;
 import org.aman.quora.producers.KafkaEventProducer;
+import org.aman.quora.repositories.QuestionDocumentRepository;
 import org.aman.quora.repositories.QuestionRepository;
 import org.aman.quora.utils.CursorUtils;
 import org.springframework.data.domain.PageRequest;
@@ -16,20 +18,27 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class QuestionService implements IQuestionService {
 
     private final QuestionRepository questionRepository;
     private final KafkaEventProducer kafkaEventProducer;
-
+    private final QuestionIndexService questionIndexService;
+    private final QuestionDocumentRepository questionDocumentRepository;
 
     @Override
     public Mono<QuestionResponseDTO> createQuestion(QuestionRequestDTO questionRequestDTO) {
 
         Question question = QuestionAdapter.toQuestion(questionRequestDTO);
         return questionRepository.save(question)
-                .map(QuestionAdapter::toQuestionResponseDTO)
+                .map(saveQuestion->{
+                    //dumping in elastic search
+                    questionIndexService.createQuestionIndex(saveQuestion);
+                    return QuestionAdapter.toQuestionResponseDTO(saveQuestion);
+                })
                 .doOnSuccess(response-> System.out.println("Question created successfully: " + response))
                 .doOnError(error -> System.out.println("Error creating question: " + error.getMessage()));
     }
@@ -72,5 +81,10 @@ public class QuestionService implements IQuestionService {
                 .map(QuestionAdapter::toQuestionResponseDTO)
                 .doOnComplete(() -> System.out.println("Questions fetched successfully"))
                 .doOnError(e -> System.out.println("Error getting questions: " + e.getMessage()));
+    }
+
+    @Override
+    public List<QuestionElasticDocument> searchQuestionByElasticSearch(String query) {
+        return questionDocumentRepository.findByTitleContainingOrContentContaining(query,query);
     }
 }

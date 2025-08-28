@@ -4,10 +4,13 @@ package org.aman.quora.controllers;
 import lombok.RequiredArgsConstructor;
 import org.aman.quora.dto.QuestionRequestDTO;
 import org.aman.quora.dto.QuestionResponseDTO;
+import org.aman.quora.models.QuestionElasticDocument;
 import org.aman.quora.services.IQuestionService;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -59,6 +62,12 @@ public class QuestionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return null;
+    }
+
+    @GetMapping("/elastic/search")
+    public List<QuestionElasticDocument> searchQuestionByElasticSearch(@RequestParam String query)
+    {
+         return questionService.searchQuestionByElasticSearch(query);
     }
 
 }
